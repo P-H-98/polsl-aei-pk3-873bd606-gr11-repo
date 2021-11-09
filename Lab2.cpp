@@ -39,6 +39,8 @@ static void drukuj(T POJ, bool x = 0)
 
 class MojeTrio
 {
+	friend struct cool_comparator;
+
 	int a;
 	double b;
 	float c;
@@ -49,7 +51,7 @@ public:
 		b = (rand() % 100000) / 1000.0;
 		c = (rand() % 10000) / 1000.0;
 	}
-	auto get_tosort() { return a; }; //  funkcja zwraca wartosc stosowana przy sortowaniu, moze to byc a b c lub cos inneo np. suma 3 liczb
+	auto get_tosort() const { return a; }; //  funkcja zwraca wartosc stosowana przy sortowaniu, moze to byc a b c lub cos inneo np. suma 3 liczb
 	friend ostream& operator<<(ostream& os, const MojeTrio& dt);
 };
 ostream& operator<<(ostream& s, const MojeTrio& dt)
@@ -58,7 +60,41 @@ ostream& operator<<(ostream& s, const MojeTrio& dt)
 	return s;
 }
 
+struct cool_comparator
+{
+	enum compare_type { A, B, SUMA };
+	cool_comparator(compare_type ct) : m_ct(ct) {};
 
+	bool operator()(const MojeTrio& lhs, const MojeTrio& rhs) const
+	{
+		switch (m_ct)
+		{
+		case A: return lhs.a < rhs.a; break;
+		case B: return lhs.b < rhs.b; break;
+		case SUMA: return (lhs.a + lhs.b) < (rhs.a + rhs.b); break;
+		default: throw std::runtime_error{ "cos strasznego :c" }; break;
+		}
+	}
+
+private:
+	compare_type m_ct;
+
+};
+
+
+bool moje_compare(const MojeTrio& lhs, const MojeTrio& rhs)
+{
+	return lhs.get_tosort() < rhs.get_tosort();
+}
+
+
+struct comparator
+{
+	bool operator()(const MojeTrio& lhs, const MojeTrio& rhs) const
+	{
+		return lhs.get_tosort() < rhs.get_tosort();
+	}
+};
 
 
 
@@ -169,8 +205,7 @@ int main()
 	tak, że wektor będzie sortowany biorąc pod uwagę różne kryteria. */
 	cout << "\n SORTOWANIE\n";
 	vector<MojeTrio> Vec3new(pojVec3);
-	partial_sort_copy(Tab3.begin(), Tab3.end(), Vec3new.begin(), Vec3new.end(), []() { });
-
+	
 
 
 	/* Mierzenie czasu na podstawie
@@ -180,6 +215,7 @@ int main()
 	cout << "\nFunkcja globalna\n";
 	auto begin = std::chrono::high_resolution_clock::now();
 	// .............  sortowanie
+	partial_sort_copy(Tab3.begin(), Tab3.end(), Vec3new.begin(), Vec3new.end(), moje_compare);
 	cout << "Vec3new[0]=" << Vec3new[0] << ("\t (odp: 0)\n");
 	cout << "Vec3new[end-1]=" << Vec3new[pojVec3 - 1] << "\t (odp: " << pojVec3 - 1 << ")\n";
 	cout << "Vec3new[17]=" << Vec3new[17] << ("\t (odp: 17)\n");
@@ -193,7 +229,12 @@ int main()
 
 	cout << "\nWyrażenie Lambda\n";
 	begin = std::chrono::high_resolution_clock::now();
-	// .............  sortowanie
+	partial_sort_copy(Tab3.begin(), Tab3.end(), Vec3new.begin(), Vec3new.end(),
+		[](const MojeTrio& lhs, const MojeTrio& rhs)
+		{
+			return lhs.get_tosort() < rhs.get_tosort();
+		}
+	);
 	cout << "Vec3new[0]=" << Vec3new[0] << ("\t (odp: 0)\n");
 	cout << "Vec3new[end-1]=" << Vec3new[pojVec3 - 1] << "\t (odp: " << pojVec3 - 1 << ")\n";
 	cout << "Vec3new[17]=" << Vec3new[17] << ("\t (odp: 17)\n");
@@ -205,7 +246,7 @@ int main()
 
 	cout << "\nObiekt funkcyjny\n";
 	begin = std::chrono::high_resolution_clock::now();
-	// .............  sortowanie
+	std::partial_sort_copy(Tab3.begin(), Tab3.end(), Vec3new.begin(), Vec3new.end(), comparator{});
 	cout << "Vec3new[0]=" << Vec3new[0] << ("\t (odp: 0)\n");
 	cout << "Vec3new[end-1]=" << Vec3new[pojVec3 - 1] << "\t (odp: " << pojVec3 - 1 << ")\n";
 	cout << "Vec3new[17]=" << Vec3new[17] << ("\t (odp: 17)\n");
@@ -222,22 +263,22 @@ int main()
 	cout << "Sortowanie Tab3 wzgledem a\n";
 
 	deque< MojeTrio> Poj4;
-	// kod: sortowanie Tab3 wzgledem a
-	// kod: kopiowanie 10 pierwszych elementow do Poj4 (wstawianie na POCZATEK KOLEJKI)
+	std::sort(Tab3.begin(), Tab3.end(), cool_comparator(cool_comparator::A));
+	std::copy(Tab3.begin(), Tab3.begin() + 10, std::front_inserter(Poj4));
 	drukuj(Poj4, 1);
 
 
 	cout << "\n\nSortowanie Tab3 wzgledem b\n";
 	Poj4.clear(); /* czyszczenie pojemnika */
-	// kod: sortowanie Tab3 wzgledem b
-	// kod: kopiowanie 10 pierwszych elementow do Poj4 (wstawianie na POCZATEK KOLEJKI)
+	std::sort(Tab3.begin(), Tab3.end(), cool_comparator(cool_comparator::B));
+	std::copy(Tab3.begin(), Tab3.begin() + 10, std::front_inserter(Poj4)); 
 	drukuj(Poj4, 1);
 
 
 	cout << "\n\nSortowanie Tab3 wzgledem sumy\n";
 	Poj4.clear(); /* czyszczenie pojemnika */
-	// kod: sortowanie Tab3 wzgledem sumy
-	// kod: kopiowanie 10 pierwszych elementow do Poj4 (wstawianie na POCZATEK KOLEJKI)
+	std::sort(Tab3.begin(), Tab3.end(), cool_comparator(cool_comparator::SUMA));
+	std::copy(Tab3.begin(), Tab3.begin() + 10, std::front_inserter(Poj4)); 
 	drukuj(Poj4, 1);
 
 
